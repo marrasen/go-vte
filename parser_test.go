@@ -67,11 +67,29 @@ type testDispatcher struct {
 
 var _ Performer = &testDispatcher{}
 
+// keepParams and keepIntermediates copy what the parser hands a
+// performer, which is its own and reused, as a performer that keeps it
+// must.
+func keepParams(params [][]uint16) [][]uint16 {
+	if params == nil {
+		return nil
+	}
+	out := make([][]uint16, len(params))
+	for i, p := range params {
+		out[i] = append([]uint16{}, p...)
+	}
+	return out
+}
+
+func keepIntermediates(intermediates []byte) []byte {
+	return append([]byte{}, intermediates...)
+}
+
 // CsiDispatch implements Performer.
 func (d *testDispatcher) CsiDispatch(params [][]uint16, intermediates []byte, ignore bool, r rune) {
 	d.dispatched = append(d.dispatched, testCsiSequence{
-		params:        params,
-		intermediates: intermediates,
+		params:        keepParams(params),
+		intermediates: keepIntermediates(intermediates),
 		ignore:        ignore,
 		rune:          r,
 	})
@@ -80,7 +98,7 @@ func (d *testDispatcher) CsiDispatch(params [][]uint16, intermediates []byte, ig
 // EscDispatch implements Performer.
 func (d *testDispatcher) EscDispatch(intermediates []byte, ignore bool, b byte) {
 	d.dispatched = append(d.dispatched, testEscSequence{
-		intermediates: intermediates,
+		intermediates: keepIntermediates(intermediates),
 		ignore:        ignore,
 		b:             b,
 	})
@@ -92,8 +110,8 @@ func (*testDispatcher) Execute(b byte) {}
 // Hook implements Performer.
 func (d *testDispatcher) Hook(params [][]uint16, intermediates []byte, ignore bool, r rune) {
 	d.dispatched = append(d.dispatched, testDcsHookSequence{
-		params:        params,
-		intermediates: intermediates,
+		params:        keepParams(params),
+		intermediates: keepIntermediates(intermediates),
 		ignore:        ignore,
 		rune:          r,
 	})

@@ -39,6 +39,11 @@ const (
 )
 
 // Performer is an interface for parsing.
+//
+// The params and intermediates handed to Hook, CsiDispatch and
+// EscDispatch are the parser's own buffers, reused for the next
+// sequence. They hold good for the length of the call; a performer that
+// keeps them copies them.
 type Performer interface {
 	// Print is called when a print action is performed.
 	Print(r rune)
@@ -90,6 +95,10 @@ type Parser struct {
 	sosPmApcRaw  []byte
 
 	performer Performer
+
+	// paramsOut holds what Params hands out, reused from one sequence to
+	// the next, so a sequence allocates nothing.
+	paramsOut [][]uint16
 }
 
 func (p *Parser) prtcb(char rune) {
@@ -184,18 +193,26 @@ func (p *Parser) Advance(b byte) {
 	}
 }
 
-// Intermediates returns the intermediates
+// Intermediates returns the intermediates. The slice is the parser's
+// own, and holds good until the next byte is parsed.
 func (p *Parser) Intermediates() []byte {
-	return append([]byte{}, p.intermediates[:p.intermediateIdx]...)
+	return p.intermediates[:p.intermediateIdx]
 }
 
-// Params returns the params
+// Params returns the params. The slice is the parser's own, and holds
+// good until the next byte is parsed.
 func (p *Parser) Params() [][]uint16 {
-	var params [][]uint16
-	p.params.Range(func(param []uint16) {
-		params = append(params, param)
-	})
-	return params
+	if p.params.len == 0 {
+		return nil
+	}
+	out := p.paramsOut[:0]
+	for i := 0; i < p.params.len; {
+		n := int(p.params.subparams[i])
+		out = append(out, p.params.params[i:i+n])
+		i += n
+	}
+	p.paramsOut = out
+	return out
 }
 
 // OscParams returns the osc params
