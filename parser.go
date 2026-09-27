@@ -21,6 +21,10 @@ const maxOscRaw = 1024
 // maxOscParams is the maximum number of osc parameters allowed.
 const maxOscParams = 16
 
+// maxSosPmApcRaw is the maximum number of bytes kept of a SOS, PM or
+// APC string. The rest is read and dropped, so a string that never ends
+// cannot grow without bound.
+const maxSosPmApcRaw = 1 << 20
 
 // SosPmApcKind represents the type of SOS/PM/APC sequence.
 type SosPmApcKind = byte
@@ -431,7 +435,9 @@ func (p *Parser) performAction(action, b byte) {
 		p.sosPmApcRaw = make([]byte, 0, 4096)
 
 	case SosPmApcPutAction:
-		p.sosPmApcRaw = append(p.sosPmApcRaw, b)
+		if len(p.sosPmApcRaw) < maxSosPmApcRaw {
+			p.sosPmApcRaw = append(p.sosPmApcRaw, b)
+		}
 
 	case SosPmApcEndAction:
 		p.sosPmApccb(p.sosPmApcKind, p.sosPmApcRaw, b == 0x07)
