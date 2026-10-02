@@ -1,4 +1,4 @@
-module github.com/danielgatis/go-vte
+module github.com/marrasen/go-vte
 
 go 1.23
 

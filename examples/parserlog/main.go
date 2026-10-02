@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/danielgatis/go-vte"
+	"github.com/marrasen/go-vte"
 )
 
 var _ (vte.Performer) = (*performer)(nil)
